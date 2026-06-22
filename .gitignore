@@ -1,0 +1,56 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+mlruns/
+*.pkl
+*.joblib
+*.model
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# Data (never commit real commune data)
+data/samples/sale_demo/
+data/raw/
+data/processed/
+*.geojson.gz
+*.csv.gz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+postgres_data/

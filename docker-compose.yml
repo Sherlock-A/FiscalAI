@@ -1,0 +1,112 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: fiscalai_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fiscalai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fiscalai_dev_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-fiscalai}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fiscalai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: fiscalai_redis
+    ports:
+      - "6381:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_dev_secret}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-redis_dev_secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fiscalai_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://fiscalai:${POSTGRES_PASSWORD:-fiscalai_dev_secret}@db:5432/fiscalai
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev_secret}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_change_in_prod_32chars!!}
+      ENVIRONMENT: development
+    volumes:
+      - ./backend:/app
+      - ./data:/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fiscalai_worker
+    environment:
+      DATABASE_URL: postgresql://fiscalai:${POSTGRES_PASSWORD:-fiscalai_dev_secret}@db:5432/fiscalai
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_dev_secret}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_change_in_prod_32chars!!}
+      ENVIRONMENT: development
+    volumes:
+      - ./backend:/app
+      - ./data:/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.worker worker --loglevel=info --concurrency=2
+
+  seeder:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fiscalai_seeder
+    environment:
+      DATABASE_URL: postgresql://fiscalai:${POSTGRES_PASSWORD:-fiscalai_dev_secret}@db:5432/fiscalai
+      BACKEND_PATH: /app
+      DEMO_DATA_DIR: /data/samples/sale_demo
+    volumes:
+      - ./backend:/app
+      - ./data:/data:ro
+      - ./scripts:/scripts:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python /scripts/seed_demo_db.py
+    restart: "no"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fiscalai_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_MAPLIBRE_STYLE: https://demotiles.maplibre.org/style.json
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
+
+volumes:
+  postgres_data:

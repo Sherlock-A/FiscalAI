@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --border: 217 32% 18%;
+    --input: 217 32% 18%;
+    --ring: 142 76% 42%;
+    --primary: 142 76% 42%;
+    --primary-foreground: 222 47% 6%;
+    --muted: 217 32% 18%;
+    --muted-foreground: 215 20% 60%;
+    --destructive: 0 62% 55%;
+    --success: 142 76% 42%;
+    --warning: 38 92% 55%;
+  }
+}
+
+/* MapLibre GL reset */
+.maplibregl-map {
+  font-family: inherit;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
